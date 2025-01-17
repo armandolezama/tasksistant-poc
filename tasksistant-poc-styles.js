@@ -34,12 +34,16 @@ export default css`
   #up-section ,
   #middle-section,
   #bottom-section,
-  #circle-container,
-  #screen-container {
+  #circle-container {
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
+  }
+
+  #screen-container {
+    display: flex;
+    flex-direction: row;
   }
   
   #circle-container {
