@@ -217,7 +217,7 @@ export class TasksistantPoc extends LitElement {
               <div
                 id="arrow-down"
                 value="bottom"
-                @click="down${this._moveCurrentNodeToDirection}"
+                @click="${this._moveCurrentNodeToDirection}"
               ></div>
             </div>
           </div>

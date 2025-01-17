@@ -30,7 +30,7 @@ export default css`
     align-items: center;
     width: 20vw;
   }
-  
+
   #up-section ,
   #middle-section,
   #bottom-section,
@@ -45,7 +45,7 @@ export default css`
     display: flex;
     flex-direction: row;
   }
-  
+
   #circle-container {
     width: 120px;
     height: 120px;
