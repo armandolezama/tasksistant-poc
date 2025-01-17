@@ -1,37 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TasksistantBoardComponent</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TasksistantBoardCase</title>
     <link rel="stylesheet" href="index.css">
     <script type="module">
-      import "../tasksistant-poc";
+      import '../tasksistant-poc';
     </script>
   </head>
   <body>
-    <div id="component-container">
-      <tasksistant-poc></tasksistant-poc>
-    </div>
-    <div>
-      <button onclick="goToNodeComponent('top')">Up</button>
-      <button onclick="goToNodeComponent('bottom')">Down</button>
-      <button onclick="goToNodeComponent('left')">Left</button>
-      <button onclick="goToNodeComponent('right')">Right</button>
-    </div>
-
-    <div>
-      <label for="columns-input">Set columns number</label>
-      <input type="number" name="columns-input" id="columns-count">
-      <label for="rows-input">Set rows number</label>
-      <input type="number" name="rows-input" id="rows-count">
-      <button onclick="setBoardSpace()"> Set board size</button>
-    </div>
-
-    <div>
-      <button onclick="linkSpaceBoard()">Link board space</button>
-    </div>
-
+    <tasksistant-poc></tasksistant-poc>
     <script src="index.js"></script>
   </body>
 </html>

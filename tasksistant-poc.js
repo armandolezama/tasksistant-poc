@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit-element";
-import "./Components/tasksistant-cell-component";
-import "./Components/tasksistant-item-component";
-import figures from './tasksistant-chart-figures';
+import { Processor } from "./tasksistant-board-processor";
+import "./Components/tasksistant-board-component";
 import styles from "./tasksistant-poc-styles";
 
 export class TasksistantPoc extends LitElement {
@@ -12,12 +11,17 @@ export class TasksistantPoc extends LitElement {
    */
   constructor() {
     super();
-    this.numberOfRows = 0;
-    this.numberOfColumns = 0;
-    this.boardSpace = [];
-    this.boardDirectory = new Map();
+    this.board = {};
+    this.previousNode = {};
     this.currentNode = {};
-    this.figures = figures;
+    this.currentNodeValidNeighbors = [];
+    this.buttonMessage = '';
+    this.reload = false;
+    this.rowsNumber = 0;
+    this.columnsNumber = 0;
+    this.order = 'figure terminator';
+    this.processor = {};
+    this.itemsButtons = [];
   };
 
   /**
@@ -25,11 +29,16 @@ export class TasksistantPoc extends LitElement {
    */
   static get properties() {
     return {
-      numberOfRows: { type: Number },
-      numberOfColumns: { type: Number },
-      boardSpace: { type: Array },
-      boardDirectory: { type: Array },
-      currentNode: { type: Object },
+      board: { type: Object },
+      previousNode: {type: Object },
+      currentNode: {type: Object },
+      currentNodeValidNeighbors: {type: Object},
+      bottonMessage: { type: String },
+      rowsNumber: { type: Number },
+      columnsNumber: { type: Number },
+      order: { type: String },
+      processor: { type: Object },
+      itemsButtons: { type: Array },
     };
   };
 
@@ -37,239 +46,205 @@ export class TasksistantPoc extends LitElement {
     return styles;
   };
 
-  removeCurrentNodeActiveStyle() {
-    this.currentNode.cell.classList.remove("focused");
+  firstUpdated() {
+    this.board = this.shadowRoot.querySelector('tasksistant-board-component');
+    this.buttonMessage = 'Load';
   };
 
-  addCurrentNodeActiveStyle() {
-    this.currentNode.cell.classList.add("focused");
+  loadBoard() {
+    this.processor = new Processor(this.rowsNumber, this.columnsNumber);
+    this.board.linkBoardSpace();
+    this.buttonMessage = 'Reload';
+    this.reload = true;
   };
 
-  focusCurrentNode() {
-    this.currentNode.cell.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-      inline: "center",
-    });
+  reloadBoard() {
+    this.board.boardSpace = [];
+    this.board.linkBoardSpace();
   };
 
-  navigateFromCurrentNodeTo(direction) {
-    if (this.currentNode.cell.sides[direction].reference.cell) {
-      this.removeCurrentNodeActiveStyle();
-      const xAxis = this.currentNode.coordinates[0];
-      const yAxis = this.currentNode.coordinates[1];
-      switch (direction) {
-        case "left":
-          this.currentNode = this.boardSpace[xAxis][yAxis - 1];
-          break;
-        case "right":
-          this.currentNode = this.boardSpace[xAxis][yAxis + 1];
-          break;
-        case "top":
-          this.currentNode = this.boardSpace[xAxis - 1][yAxis];
-          break;
-        case "bottom":
-          this.currentNode = this.boardSpace[xAxis + 1][yAxis];
-          break;
-      };
-      this.addCurrentNodeActiveStyle();
-      this.focusCurrentNode();
-      this.dispatchEvent(
-        new CustomEvent("tasksistant-board-current-node-changed", {
-          detail: {
-            currentNode: this.currentNode,
-          },
-        })
-      );
+  setBoardSpace(e) {
+    const dimension = e.target.name;
+    if (dimension === 'rows') {
+      this.rowsNumber = e.target.value;
+    } else if (dimension === 'columns') {
+      this.columnsNumber = e.target.value;
+    };
+  };
+
+  _moveCurrentNodeToDirection(e) {
+    const direction = e.target.getAttribute('value');
+    this.board.navigateFromCurrentNodeTo(direction);
+  };
+
+  _createItemButton(neighborData){
+    const canvasTitle = `${neighborData.type} ${neighborData.figure}`
+    const canvasProperties ={
+      canvasMargin: 20,
+      canvasHeight: 100,
+      canvasWidth: 100,
+      figureProperties: {
+        figure: neighborData.figure,
+        sides: {
+          left: '',
+          right: '',
+          down: '',
+          up: ''
+        }
+      },
+      stripes:  neighborData.stripes
+    };
+    const value = 'none';
+    const buttonTitle = canvasTitle;
+    return {canvasTitle, canvasProperties, value, buttonTitle};
+  };
+
+  _fillCell() {
+    let nodeData = {};
+    this.currentNode = this.board.currentNode.cell.getNodeContent();
+    this._giveLifeToCurrentCell();
+    this._giveLifeToNeighboringCells();
+    if(this.setBodyNodes){
+      const fullData = this.processor.setBodyNode(this.previousNode, this.currentNode);
+      nodeData = fullData.newNode;
+      this.previousNode = nodeData.previousNode;
     } else {
-      this.dispatchEvent(new CustomEvent("tasksistant-board-new-node-missing"));
+      nodeData = {...this.processor.setInitialNode(this.board.currentNode.coordinates)};
+      this.previousNode = {...nodeData};
+      this.setBodyNodes = true;
     };
+    this.order = nodeData.command;
+    this.board.executeOrderOnCurrentNode(this.order);
+    this.board.currentNode.cell.setNodeContent({...nodeData});
+    this._analyze({...nodeData});
   };
-
-  getNeighborOfCurrentNode(direction){
-    return this.currentNode.cell.sides[direction].reference;
-  };
-
-  setCellStateByCoordinates(xAxis = 0, yAxis= 0, state = {}) {
-    const cell = this.getCellByCoordinates(xAxis, yAxis);
-    cell.cell.setNodeContent(state);
-  };
-
-  getCellStateByCoordinates(){
-    const cell = this.getCellByCoordinates(xAxis, yAxis);
-    return cell.cell.getNodeContent();
-  }
-
-  getCellByCoordinates(xAxis = 0, yAxis = 0) {
-    if(xAxis + 1 && yAxis + 1 && xAxis < parseInt(this.numberOfRows) && yAxis < parseInt(this.numberOfColumns)){
-      return this.boardSpace[xAxis][yAxis];
+  
+  _analyze(nodeData) {
+    this.itemsButtons = [];
+    const validNeighbors = this.processor.getValidNeighbors(nodeData);
+    for (const neighborData of validNeighbors) {
+      const xAxis = neighborData.coordinates[0];
+      const yAxis = neighborData.coordinates[1];
+      this.board.setCellStateByCoordinates(xAxis, yAxis, neighborData);
+      this.itemsButtons = [...this.itemsButtons, this._createItemButton(neighborData)];
     };
+    this.currentNodeValidNeighbors =  validNeighbors;
   };
 
-  getFigures() {
-    return this.figures;
+  _giveLifeToCurrentCell(){
+    this.board.currentNode.cell.cellIsDead = false;
+    this.board.currentNode.cell.classList.add('alive');
   };
 
-  linkHTMLElements(){
-    this.boardSpace = Array.from( { length: this.numberOfRows }, (v, row) => {
-      return Array.from({ length: this.numberOfColumns }, (v2, column) => {
-        return this.generateCell(row, column);
-      });
+  _giveLifeToNeighboringCells(){
+    const currentNodeCoordinates = this.board.currentNode.coordinates;
+    [
+      [currentNodeCoordinates[0] + 1, currentNodeCoordinates[1]],
+      [currentNodeCoordinates[0] - 1, currentNodeCoordinates[1]],
+      [currentNodeCoordinates[0], currentNodeCoordinates[1] + 1],
+      [currentNodeCoordinates[0], currentNodeCoordinates[1] - 1]
+    ].map(neighbourCoordinates => {
+      const cellFromBoard = this.board.getCellByCoordinates(neighbourCoordinates[0], neighbourCoordinates[1]);
+      if(cellFromBoard) {
+        cellFromBoard.cell.classList.add('alive');
+      };
     });
-  };
-
-  generateCell(row, column) {
-    const cell = {
-      cell: this.shadowRoot.getElementById(`tasksistant-cell-${row}-${column}`),
-      item: this.shadowRoot.getElementById(`tasksistant-item-${row}-${column}`),
-      coordinates: [row, column],
-    };
-    return cell;
-  };
-
-  linkByDirection(direction, coordinates) {
-    const row = coordinates[0];
-    const column = coordinates[1];
-    const nodeOrigin = this.boardSpace[row][column];
-    let nodeDestiny = [];
-    switch (direction) {
-      case "left":
-        nodeDestiny = this.boardSpace[row][column - 1];
-        nodeOrigin.cell.setNewReference(direction, nodeDestiny);
-        nodeDestiny.cell.setNewReference("right", nodeOrigin);
-        break;
-      case "right":
-        nodeDestiny = this.boardSpace[row][column + 1];
-        nodeOrigin.cell.setNewReference(direction, nodeDestiny);
-        nodeDestiny.cell.setNewReference("left", nodeOrigin);
-        break;
-      case "top":
-        nodeDestiny = this.boardSpace[row - 1][column];
-        nodeOrigin.cell.setNewReference(direction, nodeDestiny);
-        nodeDestiny.cell.setNewReference("bottom", nodeOrigin);
-        break;
-      case "bottom":
-        nodeDestiny = this.boardSpace[row + 1][column];
-        nodeOrigin.cell.setNewReference(direction, nodeDestiny);
-        nodeDestiny.cell.setNewReference("top", nodeOrigin);
-        break;
-    };
-  };
-
-  linkBoardCells() {
-    for (const row of this.boardSpace) {
-      for (const cell of row) {
-        if (cell.coordinates[0] < this.numberOfRows - 1) {
-          this.linkByDirection("bottom", cell.coordinates);
-        };
-        if (cell.coordinates[1] < this.numberOfColumns - 1) {
-          this.linkByDirection("right", cell.coordinates);
-        };
-      };
-    };
-  };
-
-  linkBoardSpace() {
-    this.linkHTMLElements();
-    this.linkBoardCells();
-    this.currentNode = this.boardSpace[0][0];
-    this.addCurrentNodeActiveStyle();
-  };
-
-  resetBoard() {
-    this.numberOfRows = 0;
-    this.numberOfColumns = 0;
-  };
-
-  executeOrderOnCurrentNode(order){
-    const splitedOrder = order.split(' ');
-    if(splitedOrder[0] === 'figure') {
-      this.figureOrder(splitedOrder);
-    } else if(splitedOrder[0] === 'stripe') {
-      this.stripeOrder(splitedOrder);
-    };
-  };
-
-  figureOrder(splitedOrder) {
-    const complements = {
-      up: '',
-      down: '',
-      left: '',
-      right: ''
-    };
-    this.currentNode.item.setCanvasFigure(splitedOrder[1]);
-    for (let index = 2; index < splitedOrder.length; index += 2) {
-      complements[splitedOrder[index]] = splitedOrder[index + 1];
-    };
-    this.currentNode.item.setCanvasFigureComplements(complements.left, complements.right, complements.up, complements.down);
-  };
-
-  stripeOrder(splitedOrder) {
-    const stripes = {
-      left: false,
-      right: false,
-      down: false,
-      up: false
-    };
-    for (let index = 1; index < splitedOrder.length; index++) {
-      stripes[splitedOrder[index]] = true;
-    };
-    this.currentNode.item.setStripes(stripes.left, stripes.right, stripes.up, stripes.down);
-  };
-
-  createTable() {
-    if (this.numberOfRows > 0 && this.numberOfColumns > 0) {
-      let boardTemplate = html``;
-        for (let row = 0; row < this.numberOfRows; row++) {
-          boardTemplate = html`
-            ${boardTemplate}
-            <tr id="board-row-${row}" class="taksistant-table-row">
-              ${this.createRow(row)}
-            </tr>
-          `;
-        };
-      return boardTemplate;
-    } else {
-      return html`
-        ${this.numberOfRows === 0
-          ? html`<h2>Not enough rows</h2>`
-          : this.numberOfColumns === 0
-          ? html`<h2>Not enough columns</h2>`
-          : this.numberOfColumns}
-      `;
-    }
-  }
-
-  createRow(row) {
-    let boardRow = html``;
-      for (let column = 0; column < this.numberOfColumns; column++) {
-        boardRow = html`
-          ${boardRow}
-          <td class="tasksistant-table-cell">
-            <tasksistant-cell-component
-              id="tasksistant-cell-${row}-${column}"
-                class="dead">
-              <div slot="node-slot">
-                <tasksistant-item-component
-                  .figures="${this.figures}"
-                  id="tasksistant-item-${row}-${column}">
-                </tasksistant-item-component>
-              </div>
-            </tasksistant-cell-component>
-          </td>
-        `;
-      };
-    return boardRow;
   };
 
   render() {
     return html`
       <div id="main-container">
-        <table id="board-table">
-          ${this.createTable()}
-        </table>
+        <div id="screen-container">
+          <tasksistant-board-component
+            .numberOfRows="${this.rowsNumber}"
+            .numberOfColumns="${this.columnsNumber}"
+          ></tasksistant-board-component>
+        </div>
+        <div id="control-container">
+          <label for="rows">Number of rows</label>
+          <input
+            id="rows"
+            type="number"
+            placeholder="Insert a number for rows"
+            name="rows"
+            value="0"
+            @input="${this.setBoardSpace}"
+          />
+          <label for="columns">Number of columns</label>
+          <input
+            id="columns"
+            type="number"
+            placeholder="Insert a number for columns"
+            name="columns"
+            value="0"
+            @input="${this.setBoardSpace}"
+          />
+          ${this.reload ? html`
+          <button @click="${this.reloadBoard}">
+            ${this.buttonMessage}
+          </button>
+          ` : html`
+          <button @click="${this.loadBoard}">
+            ${this.buttonMessage}
+          </button>`}
+          <div id="control-pad">
+            <div id="up-section">
+              <div
+                id="arrow-up"
+                value="top"
+                @click="${this._moveCurrentNodeToDirection}"
+              ></div>
+            </div>
+            <div id="middle-section">
+              <div
+                id="arrow-left"
+                value="left"
+                @click="${this._moveCurrentNodeToDirection}"
+              ></div>
+              <div id="circle-container">
+                <div
+                  id="circle"
+                  @click="${this._fillCell}"
+                ></div>
+              </div>
+              <div
+                id="arrow-right"
+                value="right"
+                @click="${this._moveCurrentNodeToDirection}"
+              ></div>
+            </div>
+            <div id="bottom-section">
+              <div
+                id="arrow-down"
+                value="bottom"
+                @click="down${this._moveCurrentNodeToDirection}"
+              ></div>
+            </div>
+          </div>
+        </div>
+        <div id="buttons-container">
+          ${this.itemsButtons.map(
+            (itemProperties) => html`
+              <div id="canvas-title">
+                <h3>${itemProperties.canvasTitle}</h3>
+              </div>
+              <div id="canvas-container">
+                <tasksistant-item-component
+                  .figures="${this.board.figures}"
+                  .canvasProperties="${itemProperties.canvasProperties}"
+                >
+                </tasksistant-item-component>
+              </div>
+              <div id="canvas-button-container">
+                <button command="${itemProperties.value}">
+                  ${itemProperties.buttonTitle}
+                </button>
+              </div>
+            `
+          )}
+        </div>
       </div>
     `;
-  };
-};
+  }
+}
 customElements.define("tasksistant-poc", TasksistantPoc);

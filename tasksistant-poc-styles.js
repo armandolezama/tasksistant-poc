@@ -1,70 +1,97 @@
 import { css } from 'lit-element';
 
 export default css`
-
-  tasksistant-cell-component {
-    --tasksistant-cell-component-main-container-border: none;
-    --tasksistant-cell-component-node-slot-border: none;
-    --tasksistant-cell-component-node-inner-text-display: none;
-    --tasksistant-cell-component-main-container-width: 80px;
-    --tasksistant-cell-component-main-container-height: 80px;
-    --tasksistant-cell-component-node-slot-width: 80px;
-    --tasksistant-cell-component-node-slot-height: 80px;
-    width: 80px;
-    height: 80px;
-  }
-
-  tasksistant-cell-component.dead {
-    --tasksistant-cell-component-main-container-background: gray;
-    --tasksistant-cell-component-node-slot-background: gray;
-  }
-
-  tasksistant-cell-component.alive {
-    --tasksistant-cell-component-main-container-background: white;
-    --tasksistant-cell-component-node-slot-background: white;
-  }
-
-  tasksistant-cell-component.focused {
-    --tasksistant-cell-component-main-container-background: red;
-    --tasksistant-cell-component-node-slot-background: red;
-  }
-
-  tasksistant-item-component {
-    --tasksistant-canvas--host-canvas-width: 80px;
-    --tasksistant-canvas--host-canvas-height: 80px;
-    width: 80px;
-    height: 80px;
+  :host {
+    margin: 0;
   }
 
   #main-container {
-    width: 500px;
-    height: 500px;
-    margin: 0;
-    padding: 0;
-  }
-
-  #board-table {
-    display: table;
-    border-collapse: collapse;
-    box-sizing: border-box;
-    text-indent: initial;
-    border-spacing: 0;
-  }
-
-  .tasksistant-table-cell{
-    margin: 0;
-    padding: 0;
-    width: 80px;
-    height: 80px;
-    box-sizing: border-box;
-  }
-
-  .taksistant-table-row{
     display: inline-flex;
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
+    flex-direction: row;
+  }
+
+  #screen-container {
+    width: 80vw;
+    height: 98vh;
+    border: solid;
+    overflow: scroll;
+  }
+
+  #control-container {
+    border: solid;
+    border-left: none;
+    height: 500px;
+  }
+  
+  #control-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 20vw;
+  }
+  
+  #up-section ,
+  #middle-section,
+  #bottom-section,
+  #circle-container,
+  #screen-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  #circle-container {
+    width: 120px;
+    height: 120px;
+    align-items: center;
+  }
+
+  #arrow-up {
+    width: 0; 
+    height: 0; 
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    border-bottom: 60px solid #bbb;
+  }
+
+  #arrow-down {
+    width: 0; 
+    height: 0; 
+    border-left: 60px solid transparent;
+    border-right: 60px solid transparent;
+    
+    border-top: 60px solid #bbb;
+  }
+
+  #arrow-right {
+    width: 0; 
+    height: 0; 
+    border-top: 60px solid transparent;
+    border-bottom: 60px solid transparent;
+    
+    border-left: 60px solid #bbb;
+  }
+
+  #arrow-left {
+    width: 0; 
+    height: 0; 
+    border-top: 60px solid transparent;
+    border-bottom: 60px solid transparent; 
+    
+    border-right:60px solid #bbb; 
+  }
+
+  #circle {
+    height: 100px;
+    width: 100px;
+    background-color: #bbb;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  input, button, label {
+    display: inline-flex;
   }
 `;
