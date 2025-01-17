@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit-element";
 import { Processor } from "./tasksistant-board-processor";
 import "./Components/tasksistant-board-component";
+import "./Components/tasksistant-controls";
 import styles from "./tasksistant-poc-styles";
 
 export class TasksistantPoc extends LitElement {
@@ -15,7 +16,6 @@ export class TasksistantPoc extends LitElement {
     this.previousNode = {};
     this.currentNode = {};
     this.currentNodeValidNeighbors = [];
-    this.buttonMessage = '';
     this.reload = false;
     this.rowsNumber = 0;
     this.columnsNumber = 0;
@@ -33,7 +33,6 @@ export class TasksistantPoc extends LitElement {
       previousNode: {type: Object },
       currentNode: {type: Object },
       currentNodeValidNeighbors: {type: Object},
-      bottonMessage: { type: String },
       rowsNumber: { type: Number },
       columnsNumber: { type: Number },
       order: { type: String },
@@ -59,7 +58,6 @@ export class TasksistantPoc extends LitElement {
   };
 
   reloadBoard() {
-    this.board.boardSpace = [];
     this.board.linkBoardSpace();
   };
 
@@ -73,9 +71,17 @@ export class TasksistantPoc extends LitElement {
   };
 
   _moveCurrentNodeToDirection(e) {
-    const direction = e.target.getAttribute('value');
+    const { direction } = e.detail;
     this.board.navigateFromCurrentNodeTo(direction);
   };
+
+  setBoardSize(e){
+    if(e.detail.rows){
+      this.rowsNumber = e.detail.rows;
+    } else {
+      this.columnsNumber = e.detail.columns;
+    }
+  }
 
   _createItemButton(neighborData){
     const canvasTitle = `${neighborData.type} ${neighborData.figure}`
@@ -118,7 +124,15 @@ export class TasksistantPoc extends LitElement {
     this.board.currentNode.cell.setNodeContent({...nodeData});
     this._analyze({...nodeData});
   };
-  
+
+  _onLoadBoard(){
+    if(this.reload){
+      this.reloadBoard();
+    } else {
+      this.loadBoard();
+    }
+  };
+
   _analyze(nodeData) {
     this.itemsButtons = [];
     const validNeighbors = this.processor.getValidNeighbors(nodeData);
@@ -160,68 +174,12 @@ export class TasksistantPoc extends LitElement {
             .numberOfColumns="${this.columnsNumber}"
           ></tasksistant-board-component>
         </div>
-        <div id="control-container">
-          <label for="rows">Number of rows</label>
-          <input
-            id="rows"
-            type="number"
-            placeholder="Insert a number for rows"
-            name="rows"
-            value="0"
-            @input="${this.setBoardSpace}"
-          />
-          <label for="columns">Number of columns</label>
-          <input
-            id="columns"
-            type="number"
-            placeholder="Insert a number for columns"
-            name="columns"
-            value="0"
-            @input="${this.setBoardSpace}"
-          />
-          ${this.reload ? html`
-          <button @click="${this.reloadBoard}">
-            ${this.buttonMessage}
-          </button>
-          ` : html`
-          <button @click="${this.loadBoard}">
-            ${this.buttonMessage}
-          </button>`}
-          <div id="control-pad">
-            <div id="up-section">
-              <div
-                id="arrow-up"
-                value="top"
-                @click="${this._moveCurrentNodeToDirection}"
-              ></div>
-            </div>
-            <div id="middle-section">
-              <div
-                id="arrow-left"
-                value="left"
-                @click="${this._moveCurrentNodeToDirection}"
-              ></div>
-              <div id="circle-container">
-                <div
-                  id="circle"
-                  @click="${this._fillCell}"
-                ></div>
-              </div>
-              <div
-                id="arrow-right"
-                value="right"
-                @click="${this._moveCurrentNodeToDirection}"
-              ></div>
-            </div>
-            <div id="bottom-section">
-              <div
-                id="arrow-down"
-                value="bottom"
-                @click="${this._moveCurrentNodeToDirection}"
-              ></div>
-            </div>
-          </div>
-        </div>
+        <tasksistant-controls
+          @tasksistant-controls-board-data-changed="${this.setBoardSize}"
+          @tasksistant-controls-node-navigation="${this._moveCurrentNodeToDirection}"
+          @tasksistant-controls-central-button-clicked=${this._fillCell}
+          @tasksistant-controls-load-board=${this._onLoadBoard}>
+        </tasksistant-controls>
         <div id="buttons-container">
           ${this.itemsButtons.map(
             (itemProperties) => html`

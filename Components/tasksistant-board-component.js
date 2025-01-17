@@ -170,6 +170,7 @@ export class TasksistantBoardComponent extends LitElement {
   };
 
   linkBoardSpace() {
+    this.boardSpace = [];
     this.linkHTMLElements();
     this.linkBoardCells();
     this.currentNode = this.boardSpace[0][0];
