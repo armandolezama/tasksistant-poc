@@ -1,0 +1,11 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+#component-container {
+  overflow: scroll;
+  scroll-behavior: auto;
+  width: 500px;
+  height: 500px;
+}
